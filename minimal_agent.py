@@ -7,7 +7,7 @@ from tool_functions import AVAILABLE_TOOLS, TOOL_DESCRIPTIONS
 
 # --- Configuration ---
 OLLAMA_URL = "http://localhost:11434/api/generate" # Or /api/chat if using chat endpoint
-OLLAMA_MODEL = "llama3" # CHANGE THIS to your desired local model
+OLLAMA_MODEL = "llama3.2" # CHANGE THIS to your desired local model
 MAX_ITERATIONS = 5 # Limit the number of tool calls per user query to prevent loops
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

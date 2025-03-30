@@ -15,14 +15,15 @@ This repository is available at: [https://github.com/vbianchi/simple_agents](htt
 *   **Simple Agent Loop:** Demonstrates the cycle of input -> LLM planning -> tool use -> result processing -> final response.
 *   **Command-Line Interface:** Interact directly via your terminal.
 *   **Extensible:** Designed for adding more tools later.
+*   **Modern Tooling:** Uses `uv` for fast environment and package management.
 
 ## Prerequisites
 
-1.  **Python:** Python 3.7+ installed.
-2.  **Ollama:** Ollama installed and **running**. ([https://ollama.com/](https://ollama.com/)).
-3.  **Ollama Model:** An instruction-following model pulled into Ollama (e.g., `ollama pull llama3`). Configure the model name in `minimal_agent.py`.
-4.  **Python Libraries:** `requests`, `beautifulsoup4`, and `playwright`.
-5.  **Playwright Browsers:** Browser binaries for Playwright need to be installed separately.
+1.  **Python:** Python 3.8+ installed (but specify your desired version, e.g., 3.12, when using `uv`).
+2.  **uv:** The `uv` package manager installed. See [uv installation guide](https://github.com/astral-sh/uv#installation).
+3.  **Ollama:** Ollama installed and **running**. ([https://ollama.com/](https://ollama.com/)).
+4.  **Ollama Model:** An instruction-following model pulled into Ollama (e.g., `ollama pull llama3`). Configure the model name in `minimal_agent.py`.
+5.  **Playwright Browsers:** Browser binaries for Playwright need to be installed separately after dependencies.
 
 ## Installation
 
@@ -32,28 +33,37 @@ This repository is available at: [https://github.com/vbianchi/simple_agents](htt
     cd simple_agents
     ```
 
-2.  **Create and Activate a Python Virtual Environment:**
-    *   macOS/Linux:
+2.  **Create and Activate a Python Virtual Environment using `uv`:**
+    *   This command creates a virtual environment named `.venv` using the specified Python interpreter (e.g., 3.12). Adjust the Python version if needed.
         ```bash
-        python3 -m venv venv
-        source venv/bin/activate
+        uv venv --python 3.12
         ```
-    *   Windows:
-        ```bash
-        python -m venv venv
-        .\venv\Scripts\activate
-        ```
+    *   Activate the environment (the path `.venv` is conventional for `uv`):
+        *   **macOS/Linux (bash/zsh):**
+            ```bash
+            source .venv/bin/activate
+            ```
+        *   **Windows (Command Prompt):**
+            ```bash
+            .\.venv\Scripts\activate.bat
+            ```
+        *   **Windows (PowerShell):**
+            ```bash
+            .\.venv\Scripts\Activate.ps1
+            ```
+            *(If you encounter execution policy issues on PowerShell, you might need `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`)*
 
-3.  **Install Python Dependencies:**
+3.  **Install Python Dependencies using `uv`:**
+    *   With the virtual environment activated, `uv` can install the packages listed in `requirements.txt` very quickly.
     ```bash
-    pip install -r requirements.txt
+    uv pip install -r requirements.txt
     ```
 
-4.  **Install Playwright Browsers:** This crucial step downloads the browser binaries (like Chromium) that Playwright controls.
+4.  **Install Playwright Browsers:** This crucial step downloads the browser binaries (like Chromium) that Playwright controls. Run this *after* installing the Python packages.
     ```bash
     playwright install
     ```
-    *(This might take a few minutes as it downloads browser executables).*
+    *(This might take a few minutes).*
 
 ## Configuration
 
@@ -65,7 +75,7 @@ Before running, check `minimal_agent.py`:
 ## Usage
 
 1.  Ensure your Ollama service is running.
-2.  Make sure your virtual environment is activated (`source venv/bin/activate` or equivalent).
+2.  Make sure your virtual environment is activated (`source .venv/bin/activate` or equivalent).
 3.  Run the agent script from the project directory:
     ```bash
     python minimal_agent.py
@@ -74,6 +84,7 @@ Before running, check `minimal_agent.py`:
 5.  Enter your query. If the agent needs web info, it will silently launch a headless browser via Playwright to fetch and render the page.
 6.  The agent provides its final answer.
 7.  Type `'quit'` to exit.
+8.  To deactivate the virtual environment when finished: `deactivate`
 
 **Example Interaction:**
 
