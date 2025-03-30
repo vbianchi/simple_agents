@@ -17,12 +17,9 @@ from config import (
     LOG_FORMAT
 )
 
-# Configure logging using settings from config.py
-# Note: BasicConfig only configures the root logger once.
-# If other modules also call basicConfig, it might not reconfigure.
-# More robust logging setup might use logging.getLogger().setLevel() etc.
+# Configure logging
 logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
-logger = logging.getLogger(__name__) # Use module name for logger
+logger = logging.getLogger(__name__)
 
 # --- Playwright-based Web Fetching ---
 def fetch_web_content(url: str, session_path: Path = None) -> str:
@@ -30,6 +27,7 @@ def fetch_web_content(url: str, session_path: Path = None) -> str:
     Fetches the cleaned text content of a given URL using Playwright for rendering.
     Uses settings defined in config.py. Session path is ignored but accepted for consistency.
     """
+    # ... (Implementation unchanged) ...
     logger.info(f"Attempting to fetch content from: {url} using Playwright ({BROWSER_TYPE})")
     if not re.match(r'^https?://', url):
         logger.warning(f"Invalid URL format: {url}. Prepending 'http://'")
@@ -87,7 +85,6 @@ def fetch_web_content(url: str, session_path: Path = None) -> str:
                 logger.error(f"Unexpected error during Playwright fetching/parsing for {url}: {e}", exc_info=True)
                 resolved_text = f"Error: An unexpected error occurred while processing '{url}' with Playwright."
             finally:
-                 # Ensure browser is closed
                  if 'browser' in locals() and browser.is_connected():
                      browser.close()
 
@@ -100,48 +97,42 @@ def fetch_web_content(url: str, session_path: Path = None) -> str:
 
     return resolved_text
 
-
-# --- NEW: File Writing Tool ---
+# --- File Writing Tool ---
 def write_file(filename: str, content: str, session_path: Path) -> str:
-    """
+    # Use r""" (raw triple-quoted string) for the docstring
+    r"""
     Writes the given content to a file within the current session's workspace.
 
     Args:
         filename (str): The desired name for the file (e.g., "report.md", "notes.txt").
-                        Should not contain path separators like / or \.
+                        It must not contain path separators like / or \, nor start with .
         content (str): The text content to write into the file. Can be multi-line.
         session_path (Path): The absolute path to the current session's directory.
 
     Returns:
         str: A message indicating success or failure.
     """
+    # ... (Implementation unchanged) ...
     if not session_path or not isinstance(session_path, Path):
         logger.error("write_file tool called without a valid session_path.")
         return "Error: Internal agent error - session path not provided to write_file tool."
 
-    # Basic security: Prevent path traversal and invalid filenames
-    cleaned_filename = Path(filename).name # Use Pathlib to get just the filename part
+    cleaned_filename = Path(filename).name
     if cleaned_filename != filename or not cleaned_filename or cleaned_filename.startswith("."):
          logger.error(f"Invalid filename provided to write_file: '{filename}'")
-         return f"Error: Invalid filename '{filename}'. Filename cannot contain path separators, start with '.', or be empty."
-    filename = cleaned_filename # Use the cleaned name
+         return f"Error: Invalid filename '{filename}'. Filename cannot contain path separators ('/', '\\'), start with '.', or be empty."
+    filename = cleaned_filename
 
     try:
-        # Ensure the session directory exists
         session_path.mkdir(parents=True, exist_ok=True)
-
-        # Construct the full, absolute path within the session folder
         file_path = session_path.resolve() / filename
         logger.info(f"Attempting to write file: {file_path}")
 
-        # Double-check we are still within the session path (extra safety)
-        # Ensure session_path is resolved for accurate comparison
         resolved_session_path = session_path.resolve()
         if not str(file_path.parent.resolve()).startswith(str(resolved_session_path)):
              logger.error(f"Security Error: Attempted write path '{file_path}' is outside session path '{resolved_session_path}'")
              return "Error: Security constraints prevent writing to the specified path."
 
-        # Write the content to the file using UTF-8 encoding
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
