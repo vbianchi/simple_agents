@@ -1,0 +1,29 @@
+# .gitignore
+
+# Python virtual environment (uv default)
+/.venv/
+.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Workspace directory (contains generated files)
+/workspace/
+
+# VS Code settings
+.vscode/
+
+# Playwright browser cache/installations (can be large)
+/ms-playwright/
+
+# IDE files
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
