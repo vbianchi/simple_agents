@@ -92,6 +92,7 @@ The core logic remains similar, but configuration values are now imported from `
 
 ## Project Structure
 
+```bash
 simple_agents/
 ├── .venv/ # Virtual environment directory (created by uv)
 ├── config.py # <-- NEW: Central configuration file
@@ -99,6 +100,7 @@ simple_agents/
 ├── tool_functions.py # Tool function(s) definition (reads config)
 ├── requirements.txt # Project dependencies
 └── README.md # This file
+```
 
 ## Limitations & Considerations
 

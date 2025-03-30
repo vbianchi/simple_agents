@@ -3,6 +3,10 @@ import json
 import re
 import logging
 
+# Import necessary to color the output
+from colorama import init as colorama_init
+from colorama import Fore, Style
+
 # Import necessary functions/variables from other modules
 from tool_functions import AVAILABLE_TOOLS, TOOL_DESCRIPTIONS
 
@@ -20,34 +24,32 @@ from config import (
     BROWSER_HEADLESS
 )
 
-# Configure logging using settings from config.py
+# Configure logging (colorama doesn't easily color standard logging via basicConfig)
 logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
 logger = logging.getLogger(__name__) # Use module name for logger
 
-# Construct the full API URL from config parts
+# Construct the full API URL
 OLLAMA_FULL_URL = OLLAMA_BASE_URL.rstrip('/') + '/' + OLLAMA_API_ENDPOINT.lstrip('/')
 
-# --- LLM Interaction ---
+# --- LLM Interaction (call_ollama - unchanged) ---
 def call_ollama(prompt: str, context_history: list = None) -> str:
+    # ... (function content remains the same)
     """Sends a prompt to the OLLAMA API and gets a response using config settings."""
-    # Use configuration for model, options, and timeout
     payload = {
         "model": OLLAMA_MODEL,
         "prompt": prompt,
         "stream": False,
-        "options": OLLAMA_OPTIONS, # Use options dict from config
-        # "context": context_history # If using generate endpoint with history management
+        "options": OLLAMA_OPTIONS,
     }
     logger.debug(f"--- Sending Prompt to Ollama ({OLLAMA_MODEL}) ---")
-    logger.debug(f"Prompt Snippet:\n{prompt[:500]}...\n-----------------------------") # Log only snippet
+    logger.debug(f"Prompt Snippet:\n{prompt[:500]}...\n-----------------------------")
 
     try:
-        # Use full URL and timeout from config
         response = requests.post(OLLAMA_FULL_URL, json=payload, timeout=OLLAMA_API_TIMEOUT)
         response.raise_for_status()
         response_data = response.json()
         llm_response = response_data.get("response", "").strip()
-        logger.debug(f"--- Received Response from Ollama ---\n{llm_response[:500]}...\n-----------------------------") # Log snippet
+        logger.debug(f"--- Received Response from Ollama ---\n{llm_response[:500]}...\n-----------------------------")
         return llm_response
     except requests.exceptions.Timeout:
          logger.error(f"Error calling Ollama API: Request timed out after {OLLAMA_API_TIMEOUT} seconds.")
@@ -62,8 +64,9 @@ def call_ollama(prompt: str, context_history: list = None) -> str:
         logger.error(f"Unexpected error calling Ollama: {e}", exc_info=True)
         return "Error: An unexpected error occurred while communicating with Ollama."
 
-# --- Tool Parsing and Execution (No changes needed here, uses AVAILABLE_TOOLS from tool_functions) ---
+# --- Tool Parsing (parse_tool_call - unchanged) ---
 def parse_tool_call(llm_output: str):
+    # ... (function content remains the same)
     """Parses the LLM output for a tool call."""
     match = re.search(r'TOOL_CALL:\s*(\w+)\(url="([^"]*)"\)', llm_output)
     if match:
@@ -77,21 +80,26 @@ def parse_tool_call(llm_output: str):
             return None, None
     return None, None
 
+# --- Tool Execution (execute_tool - unchanged from previous version) ---
 def execute_tool(function_name: str, args: dict):
+    # ... (function content remains the same, including the added log)
     """Executes the specified tool function with the given arguments."""
     if function_name in AVAILABLE_TOOLS:
+        logger.info(f"Executing tool: '{function_name}' with args: {args}")
         tool_function = AVAILABLE_TOOLS[function_name]
         try:
             result = tool_function(**args)
             return result
         except Exception as e:
-            logger.error(f"Error executing tool {function_name} with args {args}: {e}", exc_info=True)
+            logger.error(f"Error executing tool '{function_name}' with args {args}: {e}", exc_info=True)
             return f"Error: Failed to execute tool '{function_name}'."
     else:
+        logger.error(f"Attempted to execute unknown tool: '{function_name}'")
         return f"Error: Tool '{function_name}' not found."
 
-# --- System Prompt (No changes needed, uses TOOL_DESCRIPTIONS from tool_functions) ---
+# --- System Prompt (get_system_prompt - unchanged) ---
 def get_system_prompt():
+    # ... (function content remains the same)
     """Constructs the system prompt telling the LLM how to behave and use tools."""
     return f"""You are a helpful AI assistant. Your goal is to answer the user's query.
 You have access to the following tools:
@@ -113,75 +121,82 @@ If a tool execution results in an error, acknowledge the error and try to procee
 Provide your final answer directly to the user. Do not include "TOOL_CALL" or "TOOL_RESULT" in your final response to the user.
 """
 
-# --- Main Agent Loop ---
+
+# --- Main Agent Loop (run_agent - MODIFIED for color output) ---
 def run_agent():
-    """Runs the main loop of the agent."""
-    # Log the configuration being used
+    """Runs the main loop of the agent with colored output."""
+    # --- Initialize colorama ---
+    # autoreset=True automatically adds Style.RESET_ALL after each print()
+    colorama_init(autoreset=True)
+    # --- End colorama init ---
+
     logger.info(f"Initializing agent with model: {OLLAMA_MODEL} on {OLLAMA_FULL_URL}")
     logger.info(f"Max iterations: {MAX_ITERATIONS}, Browser: {BROWSER_TYPE} ({'Headless' if BROWSER_HEADLESS else 'Visible'})")
-    print(f"Minimal Agent Initialized (using Playwright/{BROWSER_TYPE} & Ollama/{OLLAMA_MODEL}). Ask me anything. Type 'quit' to exit.")
+
+    # --- Use colorama for initial print ---
+    print(f"{Style.BRIGHT}Minimal Agent Initialized (using Playwright/{BROWSER_TYPE} & Ollama/{OLLAMA_MODEL}). Ask me anything. Type 'quit' to exit.")
+    # --- End initial print modification ---
+
     system_prompt = get_system_prompt()
     conversation_history = []
 
     while True:
         try:
-            user_query = input("You: ")
-        except EOFError: # Handle Ctrl+D or piped input ending
-             print("\nExiting.")
+            # --- Use colorama for the input prompt ---
+            user_query = input(f"{Fore.GREEN}You: {Style.RESET_ALL}") # Need reset here as input() doesn't auto-reset
+            # --- End input prompt modification ---
+        except EOFError:
+             # --- Optional: color the exit message ---
+             print(f"\n{Style.DIM}Exiting.")
+             # --- End exit message ---
              break
         if user_query.lower() == 'quit':
             break
-        if not user_query: # Skip empty input
+        if not user_query:
             continue
 
         current_prompt = f"{system_prompt}\n\nPrevious Conversation:\n"
         if conversation_history:
-             # Simple history: just include last LLM thought and tool result if any
              history_context = "\n".join(conversation_history[-2:])
              current_prompt += history_context + "\n"
              logger.debug(f"Adding context:\n{history_context}")
 
-
         current_prompt += f"\nCurrent User Query: {user_query}\n\nAssistant:"
 
         iterations = 0
-        while iterations < MAX_ITERATIONS: # Use MAX_ITERATIONS from config
+        while iterations < MAX_ITERATIONS:
             iterations += 1
             logger.info(f"--- Iteration {iterations}/{MAX_ITERATIONS} ---")
 
             llm_response = call_ollama(current_prompt)
-            # Simple way to keep track of the conversation flow for the next turn's context
             current_turn_llm_output = f"Assistant (Internal Thought/Action): {llm_response}"
-
 
             function_name, args = parse_tool_call(llm_response)
 
             if function_name and args:
                 tool_result = execute_tool(function_name, args)
-                logger.info(f"Tool Result snippet: {tool_result[:200]}...")
+                logger.info(f"Result from tool '{function_name}': {tool_result[:200]}...")
 
-                # Prepare next prompt with tool result
                 tool_result_text = f"TOOL_RESULT: {tool_result}"
                 current_prompt += f"{llm_response}\n{tool_result_text}\nAssistant:"
-                # Add both LLM's action and the tool result to history for the *next* LLM call
                 conversation_history.append(current_turn_llm_output)
                 conversation_history.append(tool_result_text)
 
             else:
-                # No tool call detected, assume this is the final answer for this query
-                print(f"Agent: {llm_response}")
-                # Add final answer to history (though it won't be used as context for *this* query anymore)
+                # --- Use colorama for the Agent's final response ---
+                # Using BRIGHT style to make the "Agent:" label stand out more
+                print(f"{Fore.CYAN}{Style.BRIGHT}Agent:{Style.NORMAL} {llm_response}")
+                # --- End agent response modification ---
                 conversation_history.append(f"Agent (Final Answer): {llm_response}")
-                break # Exit the inner iteration loop for this query
+                break
         else:
-            # Hit max iterations
             logger.warning(f"Reached maximum iterations ({MAX_ITERATIONS}) for query: {user_query}")
-            print("Agent: Reached maximum tool iterations. Unable to fully process the request with tools.")
+            # --- Optional: Color the max iterations warning ---
+            print(f"{Fore.YELLOW}Agent: Reached maximum tool iterations. Unable to fully process the request with tools.")
+            # --- End max iterations warning modification ---
             conversation_history.append(f"Agent: Reached max iterations ({MAX_ITERATIONS}).")
 
-        # Optional: Trim conversation history to prevent it from growing indefinitely
-        # A simple strategy: keep only the last N interactions (e.g., last 4 items = 2 turns)
-        history_limit = 6 # Keep last N items (adjust as needed)
+        history_limit = 6
         if len(conversation_history) > history_limit:
             logger.debug(f"Trimming conversation history from {len(conversation_history)} items")
             conversation_history = conversation_history[-history_limit:]
