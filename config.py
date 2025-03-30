@@ -1,39 +1,35 @@
-"""
-Central configuration file for the Minimal Ollama Agent.
-Modify values here to change agent behavior.
-"""
-
+# config.py
 import logging
 
 # --- Ollama / LLM Configuration ---
-OLLAMA_BASE_URL = "http://localhost:11434"   # Base URL for your Ollama instance
-OLLAMA_API_ENDPOINT = "/api/generate"       # API endpoint (use /api/chat for chat models structure)
-OLLAMA_MODEL = "llama3.2"                     # The Ollama model to use (e.g., "llama3", "mistral", "phi3")
-OLLAMA_API_TIMEOUT = 90                     # Seconds to wait for the Ollama API to respond
-
-# Optional parameters passed directly to the Ollama API in the "options" field
-# Refer to Ollama documentation for available options: https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values
+OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_API_ENDPOINT = "/api/chat" # Keep using generate for now
+OLLAMA_PLANNER_MODEL = "mistral" # Model potentially good at planning
+OLLAMA_EXECUTOR_MODEL = "mistral" # Model for executing steps (can be same or different)
+OLLAMA_API_TIMEOUT = 90
 OLLAMA_OPTIONS = {
-    "temperature": 0.7,  # Controls randomness (higher = more creative, lower = more deterministic)
+    "temperature": 0.5,  # Controls randomness (higher = more creative, lower = more deterministic)
     # "num_ctx": 4096,     # Example: Set context window size (might depend on model)
     # "top_k": 40,         # Example: Consider top_k most likely tokens
     # "top_p": 0.9,        # Example: Consider tokens comprising top_p probability mass
 }
 
 # --- Agent Configuration ---
-MAX_ITERATIONS = 5  # Maximum number of tool calls allowed per single user query to prevent loops
-CONVERSATION_HISTORY_LIMIT = 6 # Max number of items (turns) to keep in short-term history
-
-# --- Playwright Tool Configuration ---
-BROWSER_TYPE = "chromium"  # Which browser to use: "chromium", "firefox", or "webkit"
-BROWSER_HEADLESS = True    # Run browser without a visible UI window? (True=Invisible, False=Visible for debugging)
-BROWSER_USER_AGENT = 'MinimalAgent/0.4 (Mozilla/5.0; Playwright)' # How the browser identifies itself
-PAGE_LOAD_TIMEOUT = 25000  # Milliseconds to wait for page navigation to complete (e.g., 25 seconds)
-CONTENT_MAX_LENGTH = 4000  # Max characters of text to extract from a webpage (to avoid huge contexts)
+MAX_EXECUTION_ITERATIONS = 10 # Max steps in a plan to execute
+MAX_LLM_RETRIES = 2 # How many times to retry LLM call on failure
+CONVERSATION_HISTORY_LIMIT = 6 # For potential chat history display later
 
 # --- Workspace Configuration ---
 WORKSPACE_DIR = "./workspace" # Relative path to the main workspace folder
 
+# --- Tool Configuration ---
+# (Browser settings moved closer to web_tools, but can stay here too)
+BROWSER_TYPE = "chromium"
+BROWSER_HEADLESS = True
+BROWSER_USER_AGENT = 'PlannerExecutorAgent/0.1 (Mozilla/5.0; Playwright)'
+PAGE_LOAD_TIMEOUT = 25000
+CONTENT_MAX_LENGTH = 4000
+
 # --- Logging Configuration ---
-LOG_LEVEL = logging.INFO  # Minimum level of logs to display (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-LOG_FORMAT = '%(asctime)s - %(levelname)s - [%(name)s] - %(message)s' # Format for log messages
+LOG_LEVEL = logging.INFO
+LOG_FORMAT = '%(asctime)s - %(levelname)s - [%(name)s] - %(message)s'
