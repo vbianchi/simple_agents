@@ -21,7 +21,7 @@ This repository is available at: [https://github.com/vbianchi/simple_agents](htt
 1.  **Python:** Python 3.8+ recommended.
 2.  **uv:** The `uv` package manager installed. See [uv installation guide](https://github.com/astral-sh/uv#installation).
 3.  **Ollama:** Ollama installed and **running**. ([https://ollama.com/](https://ollama.com/)).
-4.  **Ollama Model:** An instruction-following model pulled into Ollama (e.g., `ollama pull llama3`). Configure the model name in `config.py`.
+4.  **Ollama Model:** An instruction-following model pulled into Ollama (e.g., `ollama pull llama3.2`). Configure the model name in `config.py`.
 5.  **Playwright Browsers:** Browser binaries for Playwright need to be installed separately.
 
 ## Installation
