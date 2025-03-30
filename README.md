@@ -1,64 +1,79 @@
-# Minimal Ollama Agent with Web Fetching Tool
+# Minimal Ollama Agent with Playwright Web Browsing
 
-This project demonstrates a bare-bones, from-scratch implementation of an "agentic" AI using Python. It connects to a locally running Ollama instance to leverage local Large Language Models (LLMs) and includes a basic tool-using capability: fetching content from web pages.
+This project implements a minimal "agentic" AI using Python, connecting to a local Ollama instance and featuring a web browsing tool powered by **Playwright**. This allows the agent to interact with modern, JavaScript-heavy websites more effectively than simple HTTP requests.
 
-The primary goal is educational, showcasing the fundamental components of an agent loop: prompt engineering for tool use, tool definition, tool execution, and feeding results back to the LLM.
+The goal is to demonstrate a basic agent loop with enhanced tool capability, showing how to integrate browser automation for information gathering.
+
+This repository is available at: [https://github.com/vbianchi/simple_agents](https://github.com/vbianchi/simple_agents)
 
 ## Features
 
-*   **Ollama Integration:** Connects directly to your running Ollama instance via its REST API.
-*   **Local LLM Usage:** Leverages any instruction-following model you have downloaded in Ollama (e.g., Llama 3, Mistral, Phi-3).
-*   **Basic Tool Use:** Implements a `fetch_web_content` tool allowing the agent to retrieve textual information from URLs.
-*   **Simple Agent Loop:** Demonstrates the cycle of receiving input, planning (implicitly via LLM response), potentially using a tool, and generating a final response.
-*   **Command-Line Interface:** Interact with the agent directly in your terminal.
-*   **Extensible:** Designed with clear separation to facilitate adding more tools.
+*   **Ollama Integration:** Connects to your running Ollama instance via its REST API.
+*   **Local LLM Usage:** Uses instruction-following models available in your Ollama installation (e.g., Llama 3, Mistral).
+*   **Playwright Tool Use:** Implements a `fetch_web_content` tool using Playwright to launch a headless browser (Chromium by default), render pages (including executing JavaScript), and extract the main textual content.
+*   **Handles Dynamic Content:** Capable of extracting information from websites that rely heavily on JavaScript to display content.
+*   **Simple Agent Loop:** Demonstrates the cycle of input -> LLM planning -> tool use -> result processing -> final response.
+*   **Command-Line Interface:** Interact directly via your terminal.
+*   **Extensible:** Designed for adding more tools later.
 
 ## Prerequisites
 
 1.  **Python:** Python 3.7+ installed.
-2.  **Ollama:** Ollama installed and **running**. You can find installation instructions at [https://ollama.com/](https://ollama.com/).
-3.  **Ollama Model:** At least one instruction-following model pulled into Ollama. Example:
-    ```bash
-    ollama pull llama3
-    ```
-    *(You will need to configure the agent script to use the specific model name you pulled).*
-4.  **Python Libraries:** `requests` for API calls and `beautifulsoup4` for basic HTML parsing.
+2.  **Ollama:** Ollama installed and **running**. ([https://ollama.com/](https://ollama.com/)).
+3.  **Ollama Model:** An instruction-following model pulled into Ollama (e.g., `ollama pull llama3`). Configure the model name in `minimal_agent.py`.
+4.  **Python Libraries:** `requests`, `beautifulsoup4`, and `playwright`.
+5.  **Playwright Browsers:** Browser binaries for Playwright need to be installed separately.
 
 ## Installation
 
-1.  **Clone the repository (or download the files):**
+1.  **Clone the repository:**
     ```bash
-    # If you put this code in a Git repository:
-    # git clone <your-repository-url>
-    # cd <repository-directory>
-
-    # Otherwise, just ensure you have the .py files in the same directory.
+    git clone https://github.com/vbianchi/simple_agents.git
+    cd simple_agents
     ```
 
-2.  **Install required libraries:**
+2.  **Create and Activate a Python Virtual Environment:**
+    *   macOS/Linux:
+        ```bash
+        python3 -m venv venv
+        source venv/bin/activate
+        ```
+    *   Windows:
+        ```bash
+        python -m venv venv
+        .\venv\Scripts\activate
+        ```
+
+3.  **Install Python Dependencies:**
     ```bash
-    pip install requests beautifulsoup4
+    pip install -r requirements.txt
     ```
+
+4.  **Install Playwright Browsers:** This crucial step downloads the browser binaries (like Chromium) that Playwright controls.
+    ```bash
+    playwright install
+    ```
+    *(This might take a few minutes as it downloads browser executables).*
 
 ## Configuration
 
-Before running, you might need to adjust settings within `minimal_agent.py`:
+Before running, check `minimal_agent.py`:
 
-1.  **`OLLAMA_URL`**: Ensure this points to your running Ollama instance. The default (`http://localhost:11434/api/generate`) is usually correct for standard local installations. If you are using the newer `/api/chat` endpoint structure with Ollama, you might need to adjust the API call logic slightly.
-2.  **`OLLAMA_MODEL`**: **Important:** Change the default value (`"llama3"`) to the exact name of the model you have pulled in Ollama and wish to use (e.g., `"mistral"`, `"phi3"`).
+1.  **`OLLAMA_URL`**: Ensure it points to your Ollama instance (default: `http://localhost:11434/api/generate`).
+2.  **`OLLAMA_MODEL`**: **Change `"llama3"`** to the exact name of the Ollama model you want to use.
 
 ## Usage
 
-1.  Make sure your Ollama service is running in the background.
-2.  Run the agent script from your terminal:
+1.  Ensure your Ollama service is running.
+2.  Make sure your virtual environment is activated (`source venv/bin/activate` or equivalent).
+3.  Run the agent script from the project directory:
     ```bash
     python minimal_agent.py
     ```
-3.  The agent will initialize and prompt you for input (`You:`).
-4.  Type your query and press Enter.
-5.  The agent will interact with the LLM. If it decides to use the `fetch_web_content` tool, you will see log messages indicating the tool call and result (these are internal agent logs, not part of the final response).
-6.  The agent will then provide its final answer.
-7.  Type `'quit'` to exit the agent.
+4.  The agent will initialize (mentioning Playwright) and prompt `You:`.
+5.  Enter your query. If the agent needs web info, it will silently launch a headless browser via Playwright to fetch and render the page.
+6.  The agent provides its final answer.
+7.  Type `'quit'` to exit.
 
 **Example Interaction:**
 
@@ -71,33 +86,26 @@ You: quit
 
 ## How it Works
 
-1.  **System Prompt:** A detailed prompt is constructed that instructs the LLM on its role, the available tools, and the *exact* format to use when it needs to call a tool (`TOOL_CALL: function_name(arg_name="value")`).
-2.  **User Query:** The user's input is added to the prompt.
-3.  **LLM Call:** The combined prompt is sent to the configured Ollama model.
-4.  **Response Analysis:** The script checks the LLM's response:
-    *   If it matches the `TOOL_CALL` format, the script parses the function name and arguments.
-    *   If it doesn't match, the response is treated as the final answer.
-5.  **Tool Execution:** If a tool call was detected:
-    *   The corresponding Python function in `tool_functions.py` is executed with the provided arguments (e.g., `fetch_web_content` is called with the URL).
-    *   The result (or an error message) is captured.
-6.  **Feedback Loop:** The original `TOOL_CALL` and the `TOOL_RESULT:` are appended to the conversation history/prompt, and the LLM is called *again*, asking it to formulate a final answer using the new information.
-7.  **Final Output:** The agent prints the final response generated by the LLM (either directly or after processing tool results).
+1.  **System Prompt:** Instructs the LLM on its role, the `fetch_web_content` tool (powered by Playwright), and the `TOOL_CALL` format.
+2.  **User Query & LLM Call:** The user's query is sent to Ollama.
+3.  **Response Analysis:** Checks if the LLM output is a `TOOL_CALL` for `fetch_web_content`.
+4.  **Tool Execution (Playwright):**
+    *   If a tool call is detected, the `fetch_web_content` function in `tool_functions.py` is executed.
+    *   It uses `sync_playwright` to launch a headless Chromium browser.
+    *   Navigates to the requested URL, allowing JavaScript to execute.
+    *   Extracts the rendered HTML content.
+    *   Uses BeautifulSoup to clean the HTML and extract the main text.
+    *   Returns the cleaned text or an error message.
+    *   Closes the browser.
+5.  **Feedback Loop:** The `TOOL_RESULT` (fetched text or error) is sent back to the LLM within an updated prompt.
+6.  **Final Output:** The LLM generates the final answer based on the processed information.
 
-## Extending with New Tools
+## Limitations & Considerations
 
-Adding new tools follows a simple pattern:
+*   **Resource Intensive:** Playwright launches real browser processes, requiring significantly more CPU and RAM than `requests`.
+*   **Slower:** Fetching takes longer due to browser launch and page rendering time.
+*   **Installation Complexity:** Requires the extra `playwright install` step.
+*   **Error Handling:** Basic Playwright errors (timeouts, navigation failures) are handled, but complex browser/website issues might still occur.
+*   **Basic Agent Structure:** Still uses a simple loop, context management, and synchronous execution.
 
-1.  **Define Function:** Create a new Python function for your tool in `tool_functions.py`. It should take specific arguments and return a string result.
-2.  **Register Tool:** Add the function name (as a string) and the function reference to the `AVAILABLE_TOOLS` dictionary in `tool_functions.py`.
-3.  **Describe Tool:** Add a description of the new tool, including its function signature (name and arguments), to the `TOOL_DESCRIPTIONS` string in `tool_functions.py`. This string is used in the system prompt to tell the LLM about the tool.
-4.  **Enhance Parsing (If Needed):** If your new tool uses arguments other than `url="value"`, you may need to update the `parse_tool_call` function in `minimal_agent.py` to correctly extract arguments for different tools (e.g., using more flexible regular expressions or argument parsing logic).
-
-## Limitations
-
-*   **Basic Tool Parsing:** Relies on simple string matching (`TOOL_CALL:...`). More complex interactions or argument types might require more robust parsing.
-*   **Simple Context Management:** Only includes the immediate previous turn (LLM response/tool result) in the prompt context for the feedback loop. Does not maintain a long conversational history effectively.
-*   **Error Handling:** Basic error handling for API calls and tool execution is included, but complex failure scenarios might not be handled gracefully.
-*   **No Streaming:** Waits for the full Ollama response; doesn't process tokens as they arrive.
-*   **Synchronous Tool Execution:** Tools are run sequentially, blocking the agent loop.
-
-This project serves as a starting point. Concepts like more advanced prompting, structured output parsing (e.g., JSON), better memory management, asynchronous operations, and more sophisticated agent frameworks (like LangChain or LlamaIndex) build upon these fundamental ideas.
+This version provides more powerful web interaction capabilities, forming a stronger base for a more capable agent, while still keeping the core agent logic relatively simple.
