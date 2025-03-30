@@ -15,7 +15,9 @@ from config import (
     OLLAMA_OPTIONS,
     MAX_ITERATIONS,
     LOG_LEVEL,
-    LOG_FORMAT
+    LOG_FORMAT,
+    BROWSER_TYPE,
+    BROWSER_HEADLESS
 )
 
 # Configure logging using settings from config.py
