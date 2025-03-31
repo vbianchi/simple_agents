@@ -1,4 +1,4 @@
-# Project Recall Summary: Simple Ollama Planner-Executor Agent (TIMO) - 31-03-2025
+# Project Recall Summary: Simple Ollama Planner-Executor Agent - 31-03-2025
 
 ## 1. Goal:
 Create a Python agent using local LLMs (via Ollama `/api/chat`) employing a **Planner-Executor** architecture to handle potentially multi-step user requests, including web interaction and file operations.
@@ -27,6 +27,8 @@ Create a Python agent using local LLMs (via Ollama `/api/chat`) employing a **Pl
 
 ## 5. Overall Plan (Future):
 Once the Judge provides better plan validation, we can resume the phased TODO list: Phase 2 (PDF Handling), Phase 3 (Improved Data Extraction/Complex Planning), Phase 4 (Robustness/Advanced Tools).
+
+
 
 # Project Recall Summary: Simple Ollama Planner-Executor Agent - 30-03-2025
 
