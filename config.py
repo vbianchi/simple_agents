@@ -7,7 +7,7 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434") # Examp
 OLLAMA_API_ENDPOINT = "/api/chat"
 OLLAMA_PLANNER_MODEL = os.getenv("OLLAMA_PLANNER_MODEL", "mistral")
 OLLAMA_EXECUTOR_MODEL = os.getenv("OLLAMA_EXECUTOR_MODEL", "mistral")
-OLLAMA_API_TIMEOUT = 90
+OLLAMA_API_TIMEOUT = 300
 OLLAMA_OPTIONS = {
     "temperature": 0.5,
     # "num_ctx": 4096,
