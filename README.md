@@ -1,5 +1,5 @@
 # Simple Ollama Planner-Executor Agent
-# Codename TIMO: The Incredible Machine Open-Source
+## Codename TIMO: The Incredible Machine Open-Source
 
 This project implements a Python-based AI agent that uses locally running Large Language Models (LLMs) via Ollama to accomplish tasks. It employs a **Planner-Executor** architecture to handle multi-step requests more reliably than simpler agent loops.
 
@@ -12,7 +12,7 @@ The agent can:
 *   Use Ollama's chat endpoint with JSON format enforcement for reliable tool call generation by the LLM (Executor).
 *   Manage tasks within dedicated session workspaces.
 
-This repository is available at: [https://github.com/vbianchi/simple_agents](https://github.com/vbianchi/simple_agents) (Replace if different)
+This repository is available at: [https://github.com/vbianchi/simple_agents](https://github.com/vbianchi/simple_agents)
 
 ## Features
 
@@ -50,7 +50,7 @@ This repository is available at: [https://github.com/vbianchi/simple_agents](htt
 1.  **Python:** Python 3.8+ recommended.
 2.  **uv:** The `uv` package manager installed. ([uv installation guide](https://github.com/astral-sh/uv#installation)).
 3.  **Ollama:** Ollama installed and **running**. ([https://ollama.com/](https://ollama.com/)). Ensure it supports the `/api/chat` endpoint and `format: json`.
-4.  **Ollama Models:** At least one capable instruction-following model installed (e.g., `ollama pull llama3`, `ollama pull mistral`, `ollama pull llama3.2`). Configure the desired Planner and Executor models in `config.py`.
+4.  **Ollama Models:** At least one capable instruction-following model installed (e.g., `ollama pull llama3.2`, `ollama pull mistral`, `ollama pull llama3.2`). Configure the desired Planner and Executor models in `config.py`.
 5.  **Playwright Browsers:** Browser binaries for Playwright need to be installed.
 
 ## Installation
