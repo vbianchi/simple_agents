@@ -6,18 +6,18 @@ This document outlines the planned enhancements for the Simple Ollama Planner-Ex
 
 *   **Goal:** Allow the agent to find information online when specific URLs are not provided by the user.
 *   **Tasks:**
-    *   [ ] **Add Dependency:** Add `duckduckgo-search` library to `requirements.txt`.
-    *   [ ] **Implement Tool:** Create `tools/search_tools.py` containing a `web_search(query, num_results)` function using `duckduckgo-search`. Include tool descriptions dictionary (`SEARCH_TOOL_DESCRIPTIONS`).
-    *   [ ] **Integrate Tool:**
+    *   [x] **Add Dependency:** Add `duckduckgo-search` library to `requirements.txt`.
+    *   [x] **Implement Tool:** Create `tools/search_tools.py` containing a `web_search(query, num_results)` function using `duckduckgo-search`. Include tool descriptions dictionary (`SEARCH_TOOL_DESCRIPTIONS`).
+    *   [x] **Integrate Tool:**
         *   Import `web_search` and `SEARCH_TOOL_DESCRIPTIONS` into `agent/planner_executor.py`.
         *   Add `web_search` to the `AVAILABLE_TOOLS_EXEC` dictionary.
         *   Modify `format_tool_descriptions()` to include the search tool description.
         *   Update tool validation checks in `generate_plan` and `parse_action_json` to recognize `web_search`.
-    *   [ ] **Enhance Planner Prompt:** Update `PLANNER_SYSTEM_PROMPT_TEMPLATE` in `agent/prompts.py`:
+    *   [x] **Enhance Planner Prompt:** Update `PLANNER_SYSTEM_PROMPT_TEMPLATE` in `agent/prompts.py`:
         *   Include `web_search` in the list of available tools.
         *   Add instructions explaining *when* to use `web_search` (i.e., when URLs are unknown).
         *   Provide new examples demonstrating plans that use `web_search` first (e.g., search -> write results, search -> extract URL -> fetch).
-    *   [ ] **Testing:** Test scenarios like "Find websites about X", "Search for Y and save the results".
+    *   [x] **Testing:** Test scenarios like "Find websites about X", "Search for Y and save the results".
 
 ## Phase 2: Enable PDF Document Handling
 
