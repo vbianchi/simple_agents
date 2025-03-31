@@ -1,4 +1,34 @@
-# Project Recall Summary: Simple Ollama Planner-Executor Agent
+# Project Recall Summary: Simple Ollama Planner-Executor Agent (TIMO) - 31-03-2025
+
+## 1. Goal:
+Create a Python agent using local LLMs (via Ollama `/api/chat`) employing a **Planner-Executor** architecture to handle potentially multi-step user requests, including web interaction and file operations.
+
+## 2. Current Status:
+*   **Architecture:** Functional Planner-Executor implemented.
+*   **Core Tools:** `fetch_web_content` (Playwright), `write_file`, `read_file`, `generate_text` (pseudo-tool handled in `main.py`).
+*   **Web Discovery (Phase 1 - ✅ Completed):** Successfully added and integrated a `web_search` tool (using `duckduckgo-search`). Default/max search results are configurable in `config.py`.
+*   **Robust Execution:** `main.py` now handles argument resolution *after* parsing the Executor's JSON, robustly substituting `output_ref` values from `step_results` even if the Executor misformats placeholders (e.g., extra quotes/braces). File tools also clean filenames.
+*   **Testing:** Successfully tested simple search-and-save workflows.
+
+## 3. Current Bottleneck/Challenge:
+*   The **Planner LLM** (tested with `mistral` and `phi4`) struggles to generate correct plans for more complex tasks requiring multiple web fetches derived from initial search results (e.g., the "ramen recipe summary" task).
+*   Common failure modes include:
+    *   Skipping necessary intermediate `fetch_web_content` steps entirely.
+    *   Attempting to process/summarize directly from the `web_search` result snippets instead of fetching full page content.
+    *   Failing to correctly plan the extraction of individual URLs before fetching.
+*   Extensive prompt engineering, including detailed workflow instructions and examples, has not reliably solved this planning limitation with the tested models.
+
+## 4. Agreed Next Step (Start of Next Session):
+*   Implement a **Rule-Based Judge/Evaluator** within the plan validation logic in `agent/planner_executor.py` (likely modifying or adding to the checks after `plan_list = json.loads(cleaned_json_str)`).
+*   **Initial Rules:** Focus on adding specific checks for known failure patterns observed:
+    *   Detect if `generate_text` is planned to directly process the output of `web_search` for extraction/summarization without intermediate `fetch_web_content` steps.
+    *   Perform basic validation of `output_ref` flow (e.g., ensure a step referenced by `output_ref` exists earlier in the plan).
+*   **Goal:** To reject these logically flawed plans *before* execution, saving time and preventing nonsensical results or errors.
+
+## 5. Overall Plan (Future):
+Once the Judge provides better plan validation, we can resume the phased TODO list: Phase 2 (PDF Handling), Phase 3 (Improved Data Extraction/Complex Planning), Phase 4 (Robustness/Advanced Tools).
+
+# Project Recall Summary: Simple Ollama Planner-Executor Agent - 30-03-2025
 
 **Goal:** Create a Python agent using local LLMs via Ollama (chat endpoint) to execute potentially multi-step tasks based on user requests.
 
