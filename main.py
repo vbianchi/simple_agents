@@ -2,46 +2,60 @@
 import logging
 import datetime
 import json
+import re # Import re for brace stripping
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 # Colorama for colored output
 from colorama import init as colorama_init
 from colorama import Fore, Style
 
 # --- CORRECTED ABSOLUTE IMPORTS ---
-# Import core components from agent and config
-import config # Import config directly
+import config
 from agent.planner_executor import (
     generate_plan,
     generate_action_json,
     parse_action_json,
     execute_tool,
-    read_file,
-    call_ollama # Need call_ollama for generation step
+    call_ollama
 )
-# Import the generation prompt template
 from agent.prompts import GENERATION_PROMPT_TEMPLATE
 # --- END CORRECTED IMPORTS ---
 
-
 # Logging setup
-logging.basicConfig(level=config.LOG_LEVEL, format=config.LOG_FORMAT) # Use config vars
+logging.basicConfig(level=config.LOG_LEVEL, format=config.LOG_FORMAT)
 logger = logging.getLogger("main")
 
 # --- Session Setup ---
 def setup_session() -> Optional[Path]:
-    """Creates workspace and a unique session folder."""
     try:
-        # Use config var
         workspace_path = Path(config.WORKSPACE_DIR); workspace_path.mkdir(parents=True, exist_ok=True)
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S"); session_path = workspace_path / f"session_{ts}"
         session_path.mkdir(exist_ok=True); logger.info(f"Session folder: {session_path.resolve()}"); return session_path
     except OSError as e:
-        # Use config var in error message
         logger.error(f"Failed create directories: {e}", exc_info=True)
         print(f"{Fore.RED}Error creating directories in '{config.WORKSPACE_DIR}'. Exiting.{Style.RESET_ALL}"); return None
 
+# --- Helper to strip quotes ---
+def strip_outer_quotes(value: str) -> str:
+    """Removes matching outer single or double quotes from a string if present."""
+    if isinstance(value, str):
+        if (value.startswith('"') and value.endswith('"')) or \
+           (value.startswith("'") and value.endswith("'")):
+            return value[1:-1]
+    return value
+
+# ---> NEW Helper to strip braces <---
+def strip_outer_braces(value: str) -> str:
+    """Removes matching outer double curly braces {{...}} from a string if present."""
+    if isinstance(value, str):
+         # Use regex for flexibility with potential whitespace
+         match = re.match(r"^\s*\{\{(.*?)\}\}\s*$", value, re.DOTALL)
+         if match:
+             return match.group(1).strip() # Return the inner content
+    return value
+
+# --- Main Execution Loop ---
 def run_session(session_path: Path):
     colorama_init(autoreset=True)
     print(f"{Style.BRIGHT}Planner-Executor Agent Initialized."); print(f"Session workspace: {session_path.resolve()}")
@@ -56,16 +70,20 @@ def run_session(session_path: Path):
         # --- Planning ---
         print(f"{Style.DIM}Generating plan...{Style.RESET_ALL}")
         plan = generate_plan(user_query)
-        if not plan: print(f"{Fore.RED}Agent: Couldn't generate a valid plan.{Style.RESET_ALL}"); continue
+        if plan is None:
+             print(f"{Fore.RED}Agent: Couldn't generate a valid plan.{Style.RESET_ALL}"); continue
+        if not plan:
+            print(f"{Fore.YELLOW}Agent: Plan is empty, nothing to execute.{Style.RESET_ALL}"); continue
+
         print(f"{Fore.YELLOW}Agent Plan:{Style.RESET_ALL}")
         for i, step in enumerate(plan): print(f"  {i+1}. {step.get('task_description','N/A')} (Tool: {step.get('tool_name','N/A')}, Output: {step.get('output_ref','N/A')})")
         print("-" * 20)
 
         # --- Execution ---
-        step_results = {}
+        step_results: Dict[str, Any] = {}
         execution_successful = True
         for i, step_data in enumerate(plan):
-            if i >= config.MAX_EXECUTION_ITERATIONS: # Use config variable
+            if i >= config.MAX_EXECUTION_ITERATIONS:
                  logger.warning(f"Reached max execution iterations."); print(f"{Fore.YELLOW}Agent: Reached max steps.{Style.RESET_ALL}")
                  execution_successful = False; break
 
@@ -77,75 +95,119 @@ def run_session(session_path: Path):
 
             if not tool_name or tool_name == "N/A":
                  logger.error(f"Step {step_num} missing tool_name."); print(f"{Fore.RED}Agent: Plan error - step {step_num} missing tool.{Style.RESET_ALL}")
-                 execution_successful = False; continue
+                 execution_successful = False; break
+
+            tool_result = None
 
             # --- Handle generate_text pseudo-tool ---
             if tool_name == "generate_text":
-                generation_instruction = plan_args.get("prompt")
-                if not generation_instruction:
-                     tool_result = "Error: 'generate_text' tool planned without a 'prompt' argument."
+                resolved_generation_instruction = plan_args.get("prompt", "")
+                if isinstance(resolved_generation_instruction, str):
+                     # Strip quotes and braces before checking key for prompt substitution
+                     potential_key = strip_outer_braces(strip_outer_quotes(resolved_generation_instruction))
+                     if potential_key in step_results:
+                        logger.info(f"Resolving 'generate_text' prompt using previous step result '{potential_key}'")
+                        resolved_generation_instruction = step_results[potential_key]
+                     else:
+                         # Use the stripped value if it changed
+                         resolved_generation_instruction = potential_key if potential_key != resolved_generation_instruction else resolved_generation_instruction
+
+                if not resolved_generation_instruction or not isinstance(resolved_generation_instruction, str):
+                     tool_result = "Error: 'generate_text' tool planned without a valid 'prompt' argument or resolved input."
                      logger.error(tool_result)
                 else:
-                     generation_prompt = GENERATION_PROMPT_TEMPLATE.format(generation_instruction=generation_instruction)
-                     logger.info(f"Calling LLM for text generation: '{generation_instruction}'")
-                     tool_result = call_ollama(generation_prompt, config.OLLAMA_EXECUTOR_MODEL, expect_json=False) # Use config
-                print(f"{Style.DIM}  Result (Generated Text): {tool_result[:300]}{'...' if len(tool_result)>300 else ''}{Style.RESET_ALL}")
+                     generation_prompt = GENERATION_PROMPT_TEMPLATE.format(generation_instruction=resolved_generation_instruction)
+                     logger.info(f"Calling LLM for text generation instruction: '{resolved_generation_instruction[:100]}...'")
+                     tool_result = call_ollama(generation_prompt, config.OLLAMA_EXECUTOR_MODEL, expect_json=False)
+                print(f"{Style.DIM}  Result (Generated Text): {str(tool_result)[:300]}{'...' if len(str(tool_result))>300 else ''}{Style.RESET_ALL}")
 
             # --- Handle regular tool calls ---
             else:
-                # --- Prepare context AND resolve arguments for execution ---
-                input_data_for_prompt = {}; # For prompt context only
-                resolved_args_for_exec = plan_args.copy() # Args for the actual tool call
-
+                # Prepare context FOR EXECUTOR PROMPT (using placeholders from plan)
+                input_data_for_prompt = {}
+                args_for_executor_prompt = plan_args.copy()
                 for arg_name, arg_value in plan_args.items():
-                    # If an argument value is a string AND matches a previous output_ref key...
                     if isinstance(arg_value, str) and arg_value in step_results:
-                        ref_key = arg_value # The key (output_ref from previous step)
-                        logger.info(f"Resolving argument '{arg_name}' using previous step result stored under key '{ref_key}' for step {step_num}")
-
-                        # --- FIXED LOGIC ---
-                        # Get the *actual result value* (text, success message etc.) from the dictionary
+                        ref_key = arg_value
                         resolved_value = step_results[ref_key]
+                        input_data_for_prompt[ref_key] = str(resolved_value)[:200] + ('...' if len(str(resolved_value)) > 200 else '')
 
-                        # For the *Executor's prompt context*, add a snippet
-                        input_data_for_prompt[ref_key] = resolved_value[:200] + ('...' if len(resolved_value) > 200 else '')
-
-                        # For the *actual tool execution*, replace the reference with the resolved value
-                        resolved_args_for_exec[arg_name] = resolved_value
-                        logger.debug(f"Resolved arg '{arg_name}' to value: {resolved_value[:100]}...")
-                        # --- END FIXED LOGIC ---
-
-                # Removed the check for execution_successful here, error handling is below
-
-                # --- Get Action JSON from Executor ---
-                action_json_content_str = generate_action_json(task_desc, tool_name, resolved_args_for_exec, input_data_for_prompt)
+                # Get Action JSON from Executor
+                action_json_content_str = generate_action_json(
+                    task_desc, tool_name, args_for_executor_prompt, input_data_for_prompt
+                )
                 if not action_json_content_str:
                     print(f"{Fore.RED}Agent: Executor failed generate action for step {step_num}. Stopping.{Style.RESET_ALL}"); execution_successful = False; break
 
-                # --- Parse Action JSON ---
-                # Use the arguments resolved above for the executor prompt, but
-                # the EXECUTED arguments come from parsing the NEW action JSON
+                # Parse Action JSON
                 exec_function_name, exec_args = parse_action_json(action_json_content_str)
-                if not exec_function_name:
+                if not exec_function_name or exec_args is None:
                     print(f"{Fore.RED}Agent: Failed parse action JSON for step {step_num}. Stopping.{Style.RESET_ALL}"); logger.warning(f"Failed parsing Action JSON: {action_json_content_str}"); execution_successful = False; break
 
-                # --- Execute Tool ---
-                # IMPORTANT: Use exec_args returned by the parser, NOT resolved_args_for_exec
-                tool_result = execute_tool(exec_function_name, exec_args, session_path)
-                print(f"{Style.DIM}  Result: {tool_result[:300]}{'...' if len(tool_result)>300 else ''}{Style.RESET_ALL}")
+                # --- Resolve Arguments AFTER Parsing (More Robust) ---
+                final_exec_args = {}
+                for arg_name, arg_value in exec_args.items():
+                    resolved = False
+                    if isinstance(arg_value, str):
+                        # ---> Try resolving in order of likelihood: braces->quotes->as_is <---
+                        potential_key_braces = strip_outer_braces(arg_value)
+                        potential_key_quotes = strip_outer_quotes(arg_value)
+                        potential_key_both = strip_outer_braces(potential_key_quotes) # Strip quotes then braces
+
+                        keys_to_check = [
+                            potential_key_both,  # Check 'content'
+                            potential_key_braces, # Check '{{content}}'
+                            potential_key_quotes, # Check '"content"'
+                            arg_value             # Check original value e.g. '"{content}"'
+                        ]
+                        # Remove duplicates while preserving order somewhat
+                        unique_keys_to_check = list(dict.fromkeys(keys_to_check))
+
+                        for key_attempt in unique_keys_to_check:
+                             if key_attempt in step_results:
+                                resolved_value = step_results[key_attempt]
+                                final_exec_args[arg_name] = resolved_value
+                                logger.info(f"Resolved argument '{arg_name}' for execution using step result '{key_attempt}'")
+                                logger.debug(f"Resolved value preview: {str(resolved_value)[:100]}...")
+                                resolved = True
+                                break # Stop checking once resolved
+
+                        if not resolved:
+                             # Not a key, use literal value - prefer stripped of quotes/braces if possible
+                             cleaned_literal = potential_key_both
+                             final_exec_args[arg_name] = cleaned_literal
+                             if cleaned_literal != arg_value:
+                                 logger.debug(f"Used literal value for arg '{arg_name}' after cleaning quotes/braces: '{cleaned_literal}'")
+
+                    if not resolved and not isinstance(arg_value, str):
+                        # Argument value is not a string (e.g., number), use it directly
+                        final_exec_args[arg_name] = arg_value
+                        resolved = True # Mark as handled
+
+                    if not resolved: # Should not happen if logic above is correct
+                         logger.warning(f"Argument '{arg_name}' with value '{arg_value}' was not resolved or used as literal.")
+                         final_exec_args[arg_name] = arg_value # Fallback to original value
+
+
+                # --- End of Updated Resolution Logic ---
+
+                # Execute Tool (using fully resolved arguments)
+                tool_result = execute_tool(exec_function_name, final_exec_args, session_path)
+                print(f"{Style.DIM}  Result: {str(tool_result)[:300]}{'...' if len(str(tool_result))>300 else ''}{Style.RESET_ALL}")
+
 
             # --- Store Result ---
+            if tool_result is None:
+                 tool_result = f"Error: Tool {tool_name} did not return a result for step {step_num}."
+                 logger.error(tool_result)
+
             if output_ref:
-                # Always store the direct result (generated text or tool status/content)
                 step_results[output_ref] = tool_result
                 logger.info(f"Stored result for step {step_num} under reference '{output_ref}'")
-                # NO NEED to update based on write_file args here anymore,
-                # because the next step will correctly retrieve the actual content
-                # from step_results if it references this output_ref.
 
             # --- Handle Step Error ---
             if isinstance(tool_result, str) and tool_result.startswith("Error:"):
-                  print(f"{Fore.RED}Agent: Step {step_num} failed: {tool_result}{Style.RESET_ALL}") # Show error
+                  print(f"{Fore.RED}Agent: Step {step_num} failed: {tool_result}{Style.RESET_ALL}")
                   execution_successful = False; break
 
         # --- End of Execution Loop ---
@@ -156,4 +218,10 @@ def run_session(session_path: Path):
 if __name__ == "__main__":
     session_path = setup_session()
     if session_path:
-        run_session(session_path)
+        try:
+            run_session(session_path)
+        except KeyboardInterrupt:
+             print(f"\n{Style.DIM}Execution interrupted by user. Exiting.{Style.RESET_ALL}")
+        except Exception as e:
+             logger.error("An uncaught exception occurred in the main loop.", exc_info=True)
+             print(f"{Fore.RED}{Style.BRIGHT}An unexpected error occurred: {e}{Style.RESET_ALL}")
