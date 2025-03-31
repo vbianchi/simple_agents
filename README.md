@@ -1,4 +1,5 @@
 # Simple Ollama Planner-Executor Agent
+# Codename TIMO: The Incredible Machine Open-Source
 
 This project implements a Python-based AI agent that uses locally running Large Language Models (LLMs) via Ollama to accomplish tasks. It employs a **Planner-Executor** architecture to handle multi-step requests more reliably than simpler agent loops.
 
