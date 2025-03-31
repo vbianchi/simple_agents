@@ -79,6 +79,11 @@ This repository is available at: [https://github.com/vbianchi/simple_agents](htt
     playwright install
     ```
 
+5.  **Install Playwright dependencies:**
+    ```bash
+    playwright install-deps
+    ```
+
 ## Configuration
 
 **All major settings are located in `config.py`**. Edit this file to adjust:
