@@ -17,7 +17,6 @@ This document outlines the planned enhancements for the Simple Ollama Planner-Ex
         *   Include `web_search` in the list of available tools.
         *   Add instructions explaining *when* to use `web_search` (i.e., when URLs are unknown).
         *   Provide new examples demonstrating plans that use `web_search` first (e.g., search -> write results, search -> extract URL -> fetch).
-<<<<<<< HEAD
         *   Refine instructions/examples to handle potential LLM quoting/formatting errors (e.g., escaped braces, no comments in JSON).
     *   [x] **Enhance Executor Prompt:** Update `EXECUTOR_SYSTEM_PROMPT_TEMPLATE` in `agent/prompts.py` with stricter instructions on JSON string formatting.
     *   [x] **Refine Argument Resolution:** Update `main.py` to robustly handle potential quoting/bracing errors from the Executor LLM when substituting `step_results`.
@@ -25,9 +24,6 @@ This document outlines the planned enhancements for the Simple Ollama Planner-Ex
     *   [x] **Testing:** Test scenarios like "Find websites about X", "Search for Y and save the results". Verified successful execution and file output.
 *   **Refinement:**
     *   [x] Made default and maximum search results configurable via `config.py` (`DEFAULT_SEARCH_RESULTS`, `MAX_SEARCH_RESULTS`) and updated `tools/search_tools.py` to use them.
-=======
-    *   [x] **Testing:** Test scenarios like "Find websites about X", "Search for Y and save the results".
->>>>>>> 6021f9bfecd0fe19706e810bc358254fcc66e6dc
 
 ## Phase 2: Enable PDF Document Handling
 
